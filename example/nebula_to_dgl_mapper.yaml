@@ -1,0 +1,86 @@
+---
+# If vertex id is string type, remap_vertex_id must be true.
+remap_vertex_id: True
+space: basketballplayer
+vertex_tags:
+  - name: player
+    features:
+      - name: age
+        properties:
+          - name: age
+            type: int
+            default: 0
+            nullable: True
+        filter:
+          # do normalization on age
+          type: function
+          function: "lambda age: age / 100"
+  - name: team
+    features:
+      - name: team
+        properties:
+          - name: name
+            type: str
+            nullable: False
+        filter:
+          # 0 stands for east coast, 1 stands for west coast
+          type: enumeration
+          enumeration:
+            Celtics: 0
+            Nets: 0
+            Knicks: 0
+            76ers: 0
+            Raptors: 0
+            Bulls: 0
+            Cavaliers: 0
+            Pistons: 0
+            Pacers: 0
+            Bucks: 0
+            Hawks: 0
+            Hornets: 0
+            Heat: 0
+            Magic: 0
+            Wizards: 0
+            Nuggets: 1
+            Timberwolves: 1
+            Thunder: 1
+            Blazers: 1
+            Jazz: 1
+            Warriors: 1
+            Clippers: 1
+            Lakers: 1
+            Suns: 1
+            Kings: 1
+            Mavericks: 1
+            Rockets: 1
+            Grizzlies: 1
+            Pelicans: 1
+            Spurs: 1
+edge_types:
+  - name: serve
+    start_vertex_tag: player
+    end_vertex_tag: team
+    features:
+      - name: service_time
+        properties:
+          - name: start_year
+            type: int
+            nullable: False
+          - name: end_year
+            type: int
+            nullable: False
+        # The variable was mapped by order of properties
+        filter:
+          type: function
+          function: "lambda start_year, end_year: end_year - start_year"
+  - name: degree
+    start_vertex_tag: player
+    end_vertex_tag: player
+    features:
+      - name: degree
+        properties:
+          - name: degree
+            type: int
+            nullable: False
+        filter:
+          type: value

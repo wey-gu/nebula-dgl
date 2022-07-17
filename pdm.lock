@@ -1,0 +1,55 @@
+[[package]]
+name = "future"
+version = "0.16.0"
+summary = "Clean single-source support for Python 3 and 2"
+
+[[package]]
+name = "httplib2"
+version = "0.18.1"
+summary = "A comprehensive HTTP client library."
+
+[[package]]
+name = "nebula3-python"
+version = "3.1.0"
+summary = "Python client for Nebula Graph V3.0"
+dependencies = [
+    "future",
+    "httplib2",
+    "pytz",
+    "six",
+]
+
+[[package]]
+name = "pytz"
+version = "2022.1"
+summary = "World timezone definitions, modern and historical"
+
+[[package]]
+name = "six"
+version = "1.11.0"
+summary = "Python 2 and 3 compatibility utilities"
+
+[metadata]
+lock_version = "3.1"
+content_hash = "sha256:b42657df48e5fc6f2495e287aa59df28ad1210a2db26db2c5deb3ac83d29cbcd"
+
+[metadata.files]
+"future 0.16.0" = [
+    {file = "future-0.16.0.tar.gz", hash = "sha256:e39ced1ab767b5936646cedba8bcce582398233d6a627067d4c6a454c90cfedb"},
+]
+"httplib2 0.18.1" = [
+    {file = "httplib2-0.18.1-py3-none-any.whl", hash = "sha256:ca2914b015b6247791c4866782fa6042f495b94401a0f0bd3e1d6e0ba2236782"},
+    {file = "httplib2-0.18.1.tar.gz", hash = "sha256:8af66c1c52c7ffe1aa5dc4bcd7c769885254b0756e6e69f953c7f0ab49a70ba3"},
+]
+"nebula3-python 3.1.0" = [
+    {file = "nebula3_python-3.1.0-py3-none-any.whl", hash = "sha256:861cc84f97e56c34a364a6fc27af3bcd60d9399dab9c80574d483b567fc1f6fa"},
+    {file = "nebula3-python-3.1.0.tar.gz", hash = "sha256:0e213e370ffb055ea022cf82d02fd0927c45fa54e11dd5da97df40db4a36d236"},
+]
+"pytz 2022.1" = [
+    {file = "pytz-2022.1-py2.py3-none-any.whl", hash = "sha256:e68985985296d9a66a881eb3193b0906246245294a881e7c8afe623866ac6a5c"},
+    {file = "pytz-2022.1.tar.gz", hash = "sha256:1e760e2fe6a8163bc0b3d9a19c4f84342afa0a2affebfaa84b01b978a02ecaa7"},
+]
+"six 1.11.0" = [
+    {file = "six-1.11.0-py2.py3-none-any.whl", hash = "sha256:832dc0e10feb1aa2c68dcc57dbb658f1c7e65b9b61af69048abc87a2db00a0eb"},
+    {file = "six-1.11.0.tar.gz", hash = "sha256:70e8a77beed4562e7f14fe23a786b54f6296e34344c23bc42f07b15018ff98e9"},
+]

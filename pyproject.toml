@@ -1,0 +1,19 @@
+[project]
+name = "nebula-dgl"
+version = "0.1.0"
+description = "Lib for Nebula Graph integration with Deep Graph Library (DGL)."
+authors = [
+    {name = "Wey Gu", email = "weyl.gu@gmail.com"},
+]
+dependencies = [
+    "nebula3-python==git+https://github.com/vesoft-inc/nebula-python.git@8c328c534413b04ccecfd42e64ce6491e09c6ca8",
+    "dgl",
+]
+readme = "README.md"
+license = {text = "Apache-2.0"}
+
+[tool.pdm]
+
+[build-system]
+requires = ["pdm-pep517>=0.12.0"]
+build-backend = "pdm.pep517.api"
