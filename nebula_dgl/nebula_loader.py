@@ -7,7 +7,7 @@ from nebula3.common import ttypes
 from dgl import DGLHeteroGraph, heterograph
 from torch import tensor
 
-from typing import Dict, List
+from typing import Dict, List, Callable
 
 import logging
 
@@ -268,7 +268,7 @@ class NebulaLoader():
             f'edge type schema and feature dict should have the same graph space, '\
             f'but now: {self.edge_type_schema_dict.keys()} and {self.edge_feature_dict.keys()}'
 
-    def get_feature_transform_function(self, features: Dict, prop_names: List):
+    def get_feature_transform_function(self, features: Dict, prop_names: List) -> Callable:
         """
         Get the transform function for the feature.
         """
@@ -418,3 +418,5 @@ class NebulaLoader():
             for edge_name, prop_values in edge_dict.items():
                 dgl_graph.edata[prop_name] = tensor(prop_values) if len(self.edge_feature_dict[space_name]) == 1 else \
                     {edge_name: tensor(prop_values)}
+
+        return dgl_graph
