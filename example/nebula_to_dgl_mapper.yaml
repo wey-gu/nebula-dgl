@@ -2,6 +2,8 @@
 # If vertex id is string type, remap_vertex_id must be true.
 remap_vertex_id: True
 space: basketballplayer
+# str or int
+vertex_id_type: str
 vertex_tags:
   - name: player
     features:
@@ -73,7 +75,7 @@ edge_types:
         filter:
           type: function
           function: "lambda start_year, end_year: end_year - start_year"
-  - name: degree
+  - name: follow
     start_vertex_tag: player
     end_vertex_tag: player
     features:

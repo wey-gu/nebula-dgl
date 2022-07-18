@@ -15,6 +15,11 @@ import logging
 VALID_FILTERS = ['function', 'enumeration', 'value']
 logger = logging.getLogger(__package__)
 ENUMERATION_DEFAULT_VALUE = -1
+NEBULA_TYPE_MAP = {
+    "int": "as_int",
+    "double": "as_double",
+    "str": "as_string",
+}
 
 
 class NebulaLoader():
@@ -48,8 +53,8 @@ class NebulaLoader():
             'graph_hosts',
             [
                 ('graphd', 9669),
-                ('graphd1', 9559),
-                ('graphd2', 9559)
+                ('graphd1', 9669),
+                ('graphd2', 9669)
             ]
         )
         config = NebulaConfig()
@@ -94,7 +99,7 @@ class NebulaLoader():
         # ensure all properties exist in nebula graph schema
         m_client = self.get_meta_client()
         self.spaces_dict = {
-            space.name.decode(): space.id.SPACE_ID
+            space.name.decode(): space.id.get_space_id()
             for space in m_client.list_spaces()}
         self.vertex_tag_schema_dict = {}
         self.tag_feature_dict = {}
@@ -110,6 +115,7 @@ class NebulaLoader():
         TODO: add validation for remap_vertex_id.
         """
         space_name = feature_mapper.get('space', None)
+        self.vertex_id_type = feature_mapper.get('vertex_id_type', 'int')
         assert space_name is not None, 'space is required in mapper'
         for vertex_tag in feature_mapper.get('vertex_tags', []):
             # ensure space exists in Nebula Graph
@@ -128,6 +134,8 @@ class NebulaLoader():
                 'tag {} does not exist'.format(tag_name)
             if space_name not in self.tag_feature_dict:
                 self.tag_feature_dict[space_name] = {tag_name: {}}
+            if tag_name not in self.tag_feature_dict[space_name]:
+                self.tag_feature_dict[space_name][tag_name] = {}
             for feature in vertex_tag.get('features', []):
                 feature_name = feature.get('name')
                 assert feature_name is not None, \
@@ -135,8 +143,8 @@ class NebulaLoader():
                 # ensure properties exists and type is correct
                 tag = self.vertex_tag_schema_dict[space_name][tag_name]
                 tag_props_types = {
-                    prop.name.decode(): ttypes.PropertyType._VALUES_TO_NAMES(
-                        prop.type.type) for prop in tag.schema.columns}
+                    prop.name.decode(): ttypes.PropertyType._VALUES_TO_NAMES[
+                        prop.type.type] for prop in tag.schema.columns}
                 for prop in feature.get('properties', []):
                     assert prop.get('name') in tag_props_types, \
                         'property {} does not exist in {}'.format(
@@ -174,11 +182,15 @@ class NebulaLoader():
                     assert len(enumeration) > 0, 'enumeration is empty'
                     self.tag_feature_dict[space_name][tag_name][feature_name] = {
                         'type': 'enumeration',
-                        'enumeration': enumeration}
+                        'enumeration': enumeration,
+                        'prop': feature.get('properties')}
                 if filter.get('type') == 'value':
                     # value is not used in this case
                     assert len(feature.get('properties', [])) == 1, \
                         'value filter can only have one property'
+                    self.tag_feature_dict[space_name][tag_name][feature_name] = {
+                        'type': 'value',
+                        'prop': feature.get('properties')}
 
         assert len(self.tag_feature_dict) == 1, \
             f'There should be only 1 graph space involved, '\
@@ -211,6 +223,12 @@ class NebulaLoader():
                         "end_vertex_tag": edge_type.get('end_vertex_tag'),
                         "features": {}
                     }}
+            if edge_name not in self.edge_feature_dict[space_name]:
+                self.edge_feature_dict[space_name][edge_name] = {
+                        "start_vertex_tag": edge_type.get('start_vertex_tag'),
+                        "end_vertex_tag": edge_type.get('end_vertex_tag'),
+                        "features": {}
+                    }
             for feature in edge_type.get('features', []):
                 feature_name = feature.get('name')
                 assert feature_name is not None, \
@@ -218,8 +236,8 @@ class NebulaLoader():
                 # ensure properties exists and type is correct
                 edge = self.edge_type_schema_dict[space_name][edge_name]
                 edge_props_types = {
-                    prop.name.decode(): ttypes.PropertyType._VALUES_TO_NAMES(
-                        prop.type.type) for prop in edge.schema.columns}
+                    prop.name.decode(): ttypes.PropertyType._VALUES_TO_NAMES[
+                        prop.type.type] for prop in edge.schema.columns}
                 for prop in feature.get('properties', []):
                     assert prop.get('name') in edge_props_types, \
                         'property {} does not exist in {}'.format(
@@ -255,11 +273,15 @@ class NebulaLoader():
                     assert len(enumeration) > 0, 'enumeration is empty'
                     self.edge_feature_dict[space_name][edge_name]['features'][feature_name] = {
                         'type': 'enumeration',
-                        'enumeration': enumeration}
+                        'enumeration': enumeration,
+                        'prop': feature.get('properties')}
                 if filter.get('type') == 'value':
                     # value is not used in this case
                     assert len(feature.get('properties', [])) == 1, \
                         'value filter can only have one property'
+                    self.edge_feature_dict[space_name][edge_name]['features'][feature_name] = {
+                        'type': 'value',
+                        'prop': feature.get('properties')}
 
         assert len(self.edge_type_schema_dict) == 1, \
             f'There should be only 1 graph space involved, '\
@@ -270,37 +292,41 @@ class NebulaLoader():
 
     def get_feature_transform_function(self, features: Dict, prop_names: List) -> Callable:
         """
-        Get the transform function for the feature.
+        Get the transform function for all the features.
         """
         prop_pos_index = {prop_name: i for i,
                           prop_name in enumerate(prop_names)}
-
         def transform_function(prop_values):
             ret_feature = []
             for feature_name in features:
                 feature = features[feature_name]
-                feature_props = feature.get('properties')
+                feature_props = feature.get('prop')
+                if feature_props is None:
+                    import pdb; pdb.set_trace()
+
                 feature_prop_names = [prop.get('name')
                                       for prop in feature_props]
-                feature_prop_values = [
-                    prop_values[prop_pos_index[prop_name]]
-                    for prop_name in feature_prop_names]
-                feature_filter = feature.get('filter')
-                if feature_filter.get('type') == 'value':
+                feature_prop_types = [prop.get('type')
+                                      for prop in feature_props]
+                feature_prop_values = []
+                for index, prop_name in enumerate(feature_prop_names):
+                    raw_value = prop_values[prop_pos_index[prop_name]]
+                    # convert byte value according to type
+                    feature_prop_values.append(
+                        getattr(raw_value, NEBULA_TYPE_MAP[feature_prop_types[index]])()
+                        )
+                if feature.get('type') == 'value':
                     ret_feature.append(feature_prop_values[0])
-                elif feature_filter.get('type') == 'enumeration':
-                    enumeration_dict = feature_filter.get('enumeration')
+                elif feature.get('type') == 'enumeration':
+                    enumeration_dict = feature.get('enumeration')
                     ret_feature.append(enumeration_dict.get(
                         feature_prop_values[0], ENUMERATION_DEFAULT_VALUE))
-                elif feature_filter.get('type') == 'function':
-                    feature_filter_function = feature_filter.get('function')
-                    feature_filter_function = eval(feature_filter_function)
+                elif feature.get('type') == 'function':
+                    feature_filter_function = feature.get('function')
                     ret_feature.append(
-                        feature_filter_function(feature_prop_values))
+                        feature_filter_function(*feature_prop_values))
             if len(ret_feature) == 0:
                 return None
-            elif len(ret_feature) == 1:
-                return ret_feature[0]
             else:
                 return ret_feature
 
@@ -331,16 +357,16 @@ class NebulaLoader():
                 props = set()
                 for feature_name in tag_features:
                     feature = tag_features[feature_name]
-                    for prop in feature.get('properties', []):
+                    if feature_name not in ndata:
+                        ndata[feature_name] = {tag_name: []}
+                    else:
+                        assert tag_name not in ndata[feature_name], \
+                            f'tag {tag_name} already exists in ndata[{feature_name}]'
+                        ndata[feature_name][tag_name] = []
+                    for prop in feature.get('prop', []):
                         props.add(prop['name'])
                 prop_names = list(props)
-                for prop_name in prop_names:
-                    if prop_name not in ndata:
-                        ndata[prop_name] = {tag_name: []}
-                    else:
-                        assert tag_name not in ndata[prop_name], \
-                            f'tag {tag_name} already exists in ndata[{prop_name}]'
-                        ndata[prop_name][tag_name] = []
+
                 graph_storage_client = self.get_storage_client()
                 resp = graph_storage_client.scan_vertex(
                     space_name=space_name,
@@ -358,11 +384,15 @@ class NebulaLoader():
                         if not tag_features:
                             continue
                         prop_values = vertex_data.get_prop_values()
-                        ndata[prop_name][tag_name].append(
-                            transform_function(prop_values))
+                        feature_values = transform_function(prop_values)
+                        for index, feature_name in enumerate(tag_features):
+                            feature = tag_features[feature_name]
+                            if feature_name not in ndata:
+                                ndata[feature_name] = {tag_name: []}
+                            ndata[feature_name][tag_name].append(feature_values[index])
                 if prop_names:
                     assert vertex_index == len(
-                        ndata[prop_names[0]][tag_name]), \
+                        ndata[feature_name][tag_name]), \
                         f'vertex index {vertex_index} != len(ndata[{prop_names[0]}][{tag_name}])'
 
         for space_name in self.edge_feature_dict:
@@ -377,16 +407,16 @@ class NebulaLoader():
                 props = set()
                 for feature_name in edge_features:
                     feature = edge_features[feature_name]
-                    for prop in feature.get('properties', []):
+                    if feature_name not in edata:
+                        edata[feature_name] = {edge_name: []}
+                    else:
+                        assert edge_name not in edata[feature_name], \
+                            f'tag {edge_name} already exists in edata[{feature_name}]'
+                        edata[feature_name][edge_name] = []
+                    for prop in feature.get('prop', []):
                         props.add(prop['name'])
                 prop_names = list(props)
-                for prop_name in prop_names:
-                    if prop_name not in edata:
-                        edata[prop_name] = {edge_name: []}
-                    else:
-                        assert edge_name not in edata[prop_name], \
-                            f'tag {edge_name} already exists in edata[{prop_name}]'
-                        edata[prop_name][edge_name] = []
+
                 graph_storage_client = self.get_storage_client()
                 resp = graph_storage_client.scan_edge(
                     space_name=space_name,
@@ -395,19 +425,32 @@ class NebulaLoader():
                 transform_function = self.get_feature_transform_function(
                     edge_features, prop_names)
                 start_vertices, end_vertices = [], []
+                start_vertex_id_dict = vertex_id_dict[space_name][start_vertex_tag]
+                end_vertex_id_dict = vertex_id_dict[space_name][end_vertex_tag]
                 while resp.has_next():
                     result = resp.next()
                     for edge_data in result:
+                        # edge data for edge
+                        start_vertices.append(
+                            start_vertex_id_dict[edge_data.get_src_id()]
+                        )
+                        end_vertices.append(
+                            end_vertex_id_dict[edge_data.get_dst_id()]
+                        )
+
                         # feature data for edge
                         if not edge_features:
                             continue
                         prop_values = edge_data.get_prop_values()
-                        edata[prop_name][edge_name].append(
-                            transform_function(prop_values))
+                        feature_values = transform_function(prop_values)
+                        for index, feature_name in enumerate(edge_features):
+                            feature = edge_features[feature_name]
+                            if feature_name not in edata:
+                                edata[feature_name] = {edge_name: []}
+                            edata[feature_name][edge_name].append(feature_values[index])
 
                 data_dict[(start_vertex_tag, edge_name, end_vertex_tag)] = (
                     tensor(start_vertices), tensor(end_vertices))
-
         dgl_graph: DGLHeteroGraph = heterograph(data_dict)
 
         for prop_name, tag_dict in ndata.items():
