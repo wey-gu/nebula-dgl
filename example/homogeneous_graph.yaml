@@ -1,0 +1,32 @@
+---
+    # If vertex id is string type, remap_vertex_id must be true.
+    remap_vertex_id: True
+    space: basketballplayer
+    # str or int
+    vertex_id_type: str
+    vertex_tags:
+      - name: player
+        features:
+          - name: age
+            properties:
+              - name: age
+                type: int
+                default: 0
+                nullable: True
+            filter:
+              # do normalization on age
+              type: function
+              function: "lambda age: age / 100"
+    edge_types:
+      - name: follow
+        start_vertex_tag: player
+        end_vertex_tag: player
+        features:
+          - name: degree
+            properties:
+              - name: degree
+                type: int
+                nullable: False
+            filter:
+              type: value
+    
