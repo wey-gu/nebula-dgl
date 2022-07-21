@@ -19,7 +19,7 @@ vertex_tags:
           function: "lambda age: age / 100"
   - name: team
     features:
-      - name: team
+      - name: coast
         properties:
           - name: name
             type: str
@@ -74,7 +74,7 @@ edge_types:
         # The variable was mapped by order of properties
         filter:
           type: function
-          function: "lambda start_year, end_year: end_year - start_year"
+          function: "lambda start_year, end_year: (end_year - start_year) / 30"
   - name: follow
     start_vertex_tag: player
     end_vertex_tag: player
