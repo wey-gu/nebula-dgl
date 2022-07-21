@@ -19,6 +19,7 @@ NEBULA_TYPE_MAP = {
     "int": "as_int",
     "double": "as_double",
     "str": "as_string",
+    "float": "as_double",
 }
 
 
