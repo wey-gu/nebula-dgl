@@ -6,7 +6,7 @@ authors = [
     {name = "Wey Gu", email = "weyl.gu@gmail.com"},
 ]
 dependencies = [
-    "git+https://github.com/vesoft-inc/nebula-python.git@8c328c534413b04ccecfd42e64ce6491e09c6ca8",
+    "nebula3-python",
     "dgl",
     "torch",
 ]
