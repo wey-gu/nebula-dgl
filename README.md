@@ -84,8 +84,8 @@ nebula_config = {
                 ('graphd1', 9669),
                 ('graphd2', 9669)
             ],
-    "user": "root",
-    "password": "nebula",
+    "nebula_user": "root",
+    "nebula_password": "nebula",
 }
 
 with open('example/homogeneous_graph.yaml', 'r') as f:
