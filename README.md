@@ -175,8 +175,8 @@ nebula_config = {
                 ('graphd1', 9669),
                 ('graphd2', 9669)
             ],
-    "user": "root",
-    "password": "nebula",
+    "nebula_user": "root",
+    "nebula_password": "nebula"
 }
 
 # load feature_mapper from yaml file
