@@ -44,11 +44,11 @@ Load example data:
 ```bash
 docker run -it --name dgl -p 8888:8888 --network nebula-net \
     -v "$PWD":/home/jovyan/work jupyter/datascience-notebook \
-    start-notebook.sh --NotebookApp.token='nebulagraph'
+    start-notebook.sh --NotebookApp.token='secret'
 ```
 Now you can either:
 
-- access the notebook at http://localhost:8888/lab/tree/work?token=nebulagraph and create a new notebook.
+- access the notebook at http://localhost:8888/lab/tree/work?token=secret and create a new notebook.
 
 Or:
 
