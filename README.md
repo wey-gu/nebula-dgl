@@ -4,6 +4,8 @@
 
 nebula-dgl is the Lib for Nebula Graph integration with Deep Graph Library (DGL).
 
+> nebula-dgl is still WIP, there is a demo project [here](https://github.com/wey-gu/NebulaGraph-Fraud-Detection-GNN/) .
+
 # Guide
 
 ## Installation
