@@ -1,0 +1,253 @@
+---
+# If vertex id is string-typed, remap_vertex_id must be true.
+remap_vertex_id: True
+space: yelp
+# str or int
+vertex_id_type: int
+vertex_tags:
+  - name: review
+    label:
+      name: is_fraud
+      properties:
+        - name: is_fraud
+          type: int
+          nullable: False
+      filter:
+        type: value
+    features:
+      # f0 to f31
+      - name: f0
+        properties:
+          - name: f0
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f1
+        properties:
+          - name: f1
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f2
+        properties:
+          - name: f2
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f3
+        properties:
+          - name: f3
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f4
+        properties:
+          - name: f4
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f5
+        properties:
+          - name: f5
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f6
+        properties:
+          - name: f6
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f7
+        properties:
+          - name: f7
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f8
+        properties:
+          - name: f8
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f9
+        properties:
+          - name: f9
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f10
+        properties:
+          - name: f10
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f11
+        properties:
+          - name: f11
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f12
+        properties:
+          - name: f12
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f13
+        properties:
+          - name: f13
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f14
+        properties:
+          - name: f14
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f15
+        properties:
+          - name: f15
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f16
+        properties:
+          - name: f16
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f17
+        properties:
+          - name: f17
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f18
+        properties:
+          - name: f18
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f19
+        properties:
+          - name: f19
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f20
+        properties:
+          - name: f20
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f21
+        properties:
+          - name: f21
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f22
+        properties:
+          - name: f22
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f23
+        properties:
+          - name: f23
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f24
+        properties:
+          - name: f24
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f25
+        properties:
+          - name: f25
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f26
+        properties:
+          - name: f26
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f27
+        properties:
+          - name: f27
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f28
+        properties:
+          - name: f28
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f29
+        properties:
+          - name: f29
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f30
+        properties:
+          - name: f30
+            type: float
+            nullable: False
+        filter:
+          type: value
+      - name: f31
+        properties:
+          - name: f31
+            type: float
+            nullable: False
+        filter:
+          type: value
+
+edge_types:
+  - name: shares_user_with
+    start_vertex_tag: review
+    end_vertex_tag: review
+  - name: shares_restaurant_rating_with
+    start_vertex_tag: review
+    end_vertex_tag: review
+  - name: shares_restaurant_in_one_month_with
+    start_vertex_tag: review
+    end_vertex_tag: review
