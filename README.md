@@ -13,6 +13,7 @@ nebula-dgl is the Lib for Nebula Graph integration with Deep Graph Library (DGL)
 ```bash
 # this is needed until nebula-python release to fix storageclient issue by including https://github.com/vesoft-inc/nebula-python/pull/219
 python3 -m pip install nebula3-python==3.3.0
+python3 -m pip install dgl dglgo -f https://data.dgl.ai/wheels/repo.html
 
 # build and install
 python3 -m pip install .
@@ -67,7 +68,8 @@ cd work
 Install nebula-dgl:
 
 ```
-!python3 -m pip install git+https://github.com/vesoft-inc/nebula-python.git@8c328c534413b04ccecfd42e64ce6491e09c6ca8
+!python3 -m pip install python3 -m pip install nebula3-python==3.3.0
+!python3 -m pip install dgl dglgo -f https://data.dgl.ai/wheels/repo.html
 !python3 -m pip install .
 ```
 

@@ -7,8 +7,6 @@ authors = [
 ]
 dependencies = [
     "nebula3-python",
-    "dgl",
-    "torch",
 ]
 readme = "README.md"
 license = {text = "Apache-2.0"}
