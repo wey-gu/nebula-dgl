@@ -221,3 +221,36 @@ networkx.degree(nx_g)
 # get degree centrality
 networkx.degree_centrality(nx_g)
 ```
+
+
+## Multi-Part Loader for Nebula Graph
+
+1. For now, the Multi-Part Loader is slow like sequence scan, need to profile the performance.
+
+```python
+import yaml
+import networkx as nx
+import matplotlib.pyplot as plt
+
+from nebula_dgl import NebulaReducedLoader
+
+
+nebula_config = {
+    "graph_hosts": [
+                ('127.0.0.1', 9669)
+            ],
+    "nebula_user": "root",
+    "nebula_password": "nebula",
+}
+
+with open('example/homogeneous_graph.yaml', 'r') as f:
+    feature_mapper = yaml.safe_load(f)
+
+# you only need change the following line: from NebulaLoader to NebulaReducedLoader
+# Easy for you to use the multi-part loader 
+nebula_reduced_loader = NebulaReducedLoader(nebula_config, feature_mapper)
+homo_dgl_graph = nebula_reduced_loader.load()
+nx_g = homo_dgl_graph.to_networkx()
+nx.draw(nx_g, with_labels=True, pos=nx.spring_layout(nx_g))
+plt.savefig("multi_graph.png")
+```
