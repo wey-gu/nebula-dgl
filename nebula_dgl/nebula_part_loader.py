@@ -51,9 +51,6 @@ class NebulaPartLoader():
             for feature_name in features:
                 feature = features[feature_name]
                 feature_props = feature.get('prop')
-                if feature_props is None:
-                    import pdb
-                    pdb.set_trace()
 
                 feature_prop_names = [prop.get('name')
                                       for prop in feature_props]
