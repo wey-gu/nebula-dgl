@@ -32,9 +32,8 @@ QUERY_MODE = "query_mode"
 
 
 
-# TBD when https://github.com/vesoft-inc/nebula-python/pull/269 is merged
-# in a release version of nebula-python, I could leverage the ValueWrapper.cast()
-# method to simplify the code below
+# NOTE: this was to add back capability to Nebula-Python 3.2.0
+
 cast_as = {
     Value.NVAL: "as_null",
     Value.BVAL: "as_bool",
