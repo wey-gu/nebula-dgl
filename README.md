@@ -107,7 +107,7 @@ homo_dgl_graph = nebula_loader.load()
 
 # or query based
 query = """
-MATCH p=()-->() RETURN p
+MATCH p=()-[:follow]->() RETURN p
 """
 nebula_loader = NebulaLoader(nebula_config, feature_mapper, query=query, query_space="basketballplayer")
 homo_dgl_graph = nebula_loader.load()
