@@ -3,6 +3,11 @@ from nebula3.sclient.GraphStorageClient import GraphStorageClient
 from nebula3.gclient.net import ConnectionPool
 from nebula3.Config import Config as NebulaConfig
 from nebula3.common import ttypes
+from nebula3.data.DataObject import Node, Relationship, PathWrapper
+
+import pandas as pd
+from nebula3.data.DataObject import Value, ValueWrapper
+from nebula3.data.ResultSet import ResultSet
 
 from dgl import DGLHeteroGraph, heterograph
 from torch import tensor
@@ -22,6 +27,58 @@ NEBULA_TYPE_MAP = {
     "float": "as_double",
 }
 
+SCAN_MODE = "scan_mode"
+QUERY_MODE = "query_mode"
+
+
+
+# NOTE: this was to add back capability to Nebula-Python 3.2.0
+
+cast_as = {
+    Value.NVAL: "as_null",
+    Value.BVAL: "as_bool",
+    Value.IVAL: "as_int",
+    Value.FVAL: "as_double",
+    Value.SVAL: "as_string",
+    Value.LVAL: "as_list",
+    Value.UVAL: "as_set",
+    Value.MVAL: "as_map",
+    Value.TVAL: "as_time",
+    Value.DVAL: "as_date",
+    Value.DTVAL: "as_datetime",
+    Value.VVAL: "as_node",
+    Value.EVAL: "as_relationship",
+    Value.PVAL: "as_path",
+    Value.GGVAL: "as_geography",
+    Value.DUVAL: "as_duration",
+}
+
+def result_to_df(result: ResultSet) -> pd.DataFrame:
+    """
+    build list for each column, and transform to dataframe
+    """
+    columns = result.keys()
+    d: Dict[str, list] = {}
+    for col_num in range(result.col_size()):
+        col_name = columns[col_num]
+        col_list = result.column_values(col_name)
+        d[col_name] = [cast(x) for x in col_list]
+    return pd.DataFrame(d)
+
+
+def cast(val: ValueWrapper):
+    _type = val._value.getType()
+    if _type == Value.__EMPTY__:
+        return None
+    if _type in cast_as:
+        return getattr(val, cast_as[_type])()
+    if _type == Value.LVAL:
+        return [x.cast() for x in val.as_list()]
+    if _type == Value.UVAL:
+        return {x.cast() for x in val.as_set()}
+    if _type == Value.MVAL:
+        return {k: v.cast() for k, v in val.as_map().items()}
+
 
 class NebulaLoader():
     """
@@ -33,12 +90,21 @@ class NebulaLoader():
 
     """
 
-    def __init__(self, nebula_config: Dict, feature_mapper: Dict):
+    def __init__(self, nebula_config: Dict, feature_mapper: Dict, query: str = None, query_space: str = None):
         """
         Initialize the NebulaLoader class.
         """
         self.nebula_config = nebula_config
         self.init_connection()
+        if query is None:
+            self.mode = SCAN_MODE
+
+        else:
+            self.mode = QUERY_MODE
+            assert query_space is not None, "query_space must be specified in query mode"
+            self.query = query
+            self.query_space = query_space
+
         self.remap_vertex_id = feature_mapper.get('remap_vertex_id', True)
         if self.remap_vertex_id:
             self.vertex_id_dict = dict()
@@ -48,8 +114,8 @@ class NebulaLoader():
         """
         Get the connection to the Nebula Graph.
         """
-        user = self.nebula_config.get('nebula_user', 'root')
-        password = self.nebula_config.get('nebula_password', 'nebula')
+        self._user = self.nebula_config.get('nebula_user', 'root')
+        self._password = self.nebula_config.get('nebula_password', 'nebula')
         graph_hosts = self.nebula_config.get(
             'graph_hosts',
             [
@@ -63,7 +129,7 @@ class NebulaLoader():
         self.connection_pool = ConnectionPool()
         self.connection_pool.init(graph_hosts, config)
         # get meta_hosts
-        with self.connection_pool.session_context(user, password) as session:
+        with self.connection_pool.session_context(self._user, self._password) as session:
             meta_hosts = []
             result = session.execute('SHOW HOSTS META')
             assert result.is_succeeded() and result.error_code() == 0
@@ -104,6 +170,7 @@ class NebulaLoader():
             for space in m_client.list_spaces()}
         self.vertex_tag_schema_dict = {}
         self.tag_feature_dict = {}
+        self.prop_pos_index = {}
         self._validate_vertex_tags(m_client, feature_mapper)
         self.edge_type_schema_dict = {}
         self.edge_feature_dict = {}
@@ -129,6 +196,12 @@ class NebulaLoader():
                     tag.tag_name.decode(): tag for tag in m_client.list_tags(
                         self.spaces_dict[space_name])
                 }
+            # build self.prop_pos_index
+            if tag_name not in self.prop_pos_index:
+                self.prop_pos_index[tag_name] = dict()
+            tag = self.vertex_tag_schema_dict[space_name][tag_name]
+            for index, prop in enumerate(tag.schema.columns):
+                self.prop_pos_index[tag_name][prop.name.decode()] = index
 
             # ensure tag exists
             assert tag_name in self.vertex_tag_schema_dict[space_name], \
@@ -213,8 +286,16 @@ class NebulaLoader():
                         self.spaces_dict[space_name])
                 }
 
-            # ensure edge exists
+            # build self.prop_pos_index
             edge_name = edge_type.get('name')
+            if edge_name not in self.prop_pos_index:
+                self.prop_pos_index[edge_name] = dict()
+            edge = self.edge_type_schema_dict[space_name][edge_name]
+            for index, prop in enumerate(edge.schema.columns):
+                self.prop_pos_index[edge_name][prop.name.decode()] = index
+
+            # ensure edge exists
+
             assert edge_name in self.edge_type_schema_dict[space_name], \
                 'edge {} does not exist'.format(edge_name)
             if space_name not in self.edge_feature_dict:
@@ -302,8 +383,6 @@ class NebulaLoader():
             for feature_name in features:
                 feature = features[feature_name]
                 feature_props = feature.get('prop')
-                if feature_props is None:
-                    import pdb; pdb.set_trace()
 
                 feature_prop_names = [prop.get('name')
                                       for prop in feature_props]
@@ -311,6 +390,7 @@ class NebulaLoader():
                                       for prop in feature_props]
                 feature_prop_values = []
                 for index, prop_name in enumerate(feature_prop_names):
+                    #raw_value = prop_values[self.prop_pos_index[tag_or_edge][prop_name]]
                     raw_value = prop_values[prop_pos_index[prop_name]]
                     # convert byte value according to type
                     feature_prop_values.append(
@@ -333,12 +413,10 @@ class NebulaLoader():
 
         return transform_function
 
-    def load(self) -> DGLHeteroGraph:
+    def _load_in_scan_mode(self) -> DGLHeteroGraph:
         """
-        Load the data from Nebula Graph Cluster, return a DGL heterograph.
-        ref: https://github.com/dmlc/dgl/blob/master/python/dgl/convert.py::heterograph
+        Load the graph in scan mode.
         """
-        # generate vertices per tag
 
         data_dict = dict()
 
@@ -464,3 +542,174 @@ class NebulaLoader():
                     {edge_name: tensor(prop_values)}
 
         return dgl_graph
+
+    def parse_result(self, g: Dict, item):
+        if isinstance(item, Node):
+            node_id = item.get_id().cast()
+            tags = item.tags()  # list of strings
+            for tag in tags:
+                props = item.properties(tag)
+                g["nodes"][tag][node_id] = props
+        elif isinstance(item, Relationship):
+            src_id = item.start_vertex_id().cast()
+            dst_id = item.end_vertex_id().cast()
+            edge_name = item.edge_name()
+            props = item.properties()
+            # NOTE: we didn't handle rank here for now
+            g["edges"][edge_name][(src_id, dst_id)] = props
+
+        elif isinstance(item, PathWrapper):
+            for node in item.nodes():
+                self.parse_result(g, node)
+            for edge in item.relationships():
+                self.parse_result(g, edge)
+        elif isinstance(item, list):
+            for it in item:
+                self.parse_result(g, it)
+
+    def _load_in_query_mode(self) -> DGLHeteroGraph:
+        """
+        load in query mode
+        """
+        g: Dict = {
+            "space_name": self.query_space,
+            "edges": {edge_type: {} for edge_type in self.edge_type_schema_dict[self.query_space]},
+            "nodes": {tag: {} for tag in self.vertex_tag_schema_dict[self.query_space]}
+        }
+
+        with self.connection_pool.session_context(self._user, self._password) as session:
+            session.execute(f'USE {self.query_space}')
+            result: ResultSet = session.execute(self.query)
+
+            assert (result.is_succeeded() and result.error_code() == 0), (
+                f"failed to query: {self.query} on space: {self.query_space}\n"
+                f"error: {result.error_msg}"
+            )
+
+        result_df = result_to_df(result)
+        for _, row in result_df.iterrows():
+            for item in row:
+                self.parse_result(g, item)
+
+        data_dict = dict()
+
+        vertex_id_dict = dict()
+        ndata = dict()
+        edata = dict()
+
+        # assumed only one graph space though, we iterate it here.
+        for space_name in self.tag_feature_dict:
+            if space_name not in vertex_id_dict:
+                vertex_id_dict[space_name] = dict()
+            for tag_name in self.tag_feature_dict[space_name]:
+                if tag_name not in vertex_id_dict[space_name]:
+                    vertex_id_dict[space_name][tag_name] = dict()
+                _vertex_id_dict = vertex_id_dict[space_name][tag_name]
+                tag_features = self.tag_feature_dict[space_name][tag_name]
+                props = set()
+                for feature_name in tag_features:
+                    feature = tag_features[feature_name]
+                    if feature_name not in ndata:
+                        ndata[feature_name] = {tag_name: []}
+                    else:
+                        assert tag_name not in ndata[feature_name], \
+                            f'tag {tag_name} already exists in ndata[{feature_name}]'
+                        ndata[feature_name][tag_name] = []
+                    for prop in feature.get('prop', []):
+                        props.add(prop['name'])
+                prop_names = list(props)
+
+                vertex_index = 0
+                transform_function = self.get_feature_transform_function(
+                    tag_features, prop_names)
+                for vertex_id, prop_map in g['nodes'][tag_name].items():
+                    _vertex_id_dict[vertex_id] = vertex_index
+                    vertex_index += 1
+                    # feature data for vertex(node)
+                    if not tag_features:
+                        continue
+                    prop_values = [prop_map.get(prop_name) for prop_name in prop_names]
+                    feature_values = transform_function(prop_values)
+                    for index, feature_name in enumerate(tag_features):
+                        feature = tag_features[feature_name]
+                        if feature_name not in ndata:
+                            ndata[feature_name] = {tag_name: []}
+                        ndata[feature_name][tag_name].append(feature_values[index])
+
+                if prop_names:
+                    assert vertex_index == len(
+                        ndata[feature_name][tag_name]), \
+                        f'vertex index {vertex_index} != len(ndata[{prop_names[0]}][{tag_name}])'
+
+        for space_name in self.edge_feature_dict:
+
+            for edge_name in self.edge_feature_dict[space_name]:
+                edge = self.edge_feature_dict[space_name][edge_name]
+                edge_features = edge.get('features', {})
+                start_vertex_tag, end_vertex_tag = edge.get(
+                    'start_vertex_tag'), edge.get('end_vertex_tag')
+                assert (start_vertex_tag, edge_name, end_vertex_tag) not in data_dict, \
+                    f'edge {start_vertex_tag}-{edge_name}-{end_vertex_tag} already exists'
+                props = set()
+                for feature_name in edge_features:
+                    feature = edge_features[feature_name]
+                    if feature_name not in edata:
+                        edata[feature_name] = {edge_name: []}
+                    else:
+                        assert edge_name not in edata[feature_name], \
+                            f'tag {edge_name} already exists in edata[{feature_name}]'
+                        edata[feature_name][edge_name] = []
+                    for prop in feature.get('prop', []):
+                        props.add(prop['name'])
+                prop_names = list(props)
+
+                transform_function = self.get_feature_transform_function(
+                    edge_features, prop_names)
+                start_vertices, end_vertices = [], []
+                start_vertex_id_dict = vertex_id_dict[space_name][start_vertex_tag]
+                end_vertex_id_dict = vertex_id_dict[space_name][end_vertex_tag]
+
+                for edge_tuple, prop_map in g['edges'][edge_name].items():
+                    start_vertices.append(
+                        start_vertex_id_dict[edge_tuple[0]]
+                    )
+                    end_vertices.append(
+                        end_vertex_id_dict[edge_tuple[1]]
+                    )
+                    # feature data for edge
+                    if not edge_features:
+                        continue
+                    prop_values = [prop_map.get(prop_name) for prop_name in prop_names]
+                    feature_values = transform_function(prop_values)
+                    for index, feature_name in enumerate(edge_features):
+                        feature = edge_features[feature_name]
+                        if feature_name not in edata:
+                            edata[feature_name] = {edge_name: []}
+                        edata[feature_name][edge_name].append(feature_values[index])
+
+                data_dict[(start_vertex_tag, edge_name, end_vertex_tag)] = (
+                    tensor(start_vertices), tensor(end_vertices))
+        dgl_graph: DGLHeteroGraph = heterograph(data_dict)
+
+        for prop_name, tag_dict in ndata.items():
+            for tag_name, prop_values in tag_dict.items():
+                dgl_graph.ndata[prop_name] = tensor(prop_values) if len(self.tag_feature_dict[space_name]) == 1 else \
+                    {tag_name: tensor(prop_values)}
+        for prop_name, edge_dict in edata.items():
+            for edge_name, prop_values in edge_dict.items():
+                dgl_graph.edata[prop_name] = tensor(prop_values) if len(self.edge_feature_dict[space_name]) == 1 else \
+                    {edge_name: tensor(prop_values)}
+
+        return dgl_graph
+
+    def load(self) -> DGLHeteroGraph:
+        """
+        Load the data from Nebula Graph Cluster, return a DGL heterograph.
+        ref: https://github.com/dmlc/dgl/blob/master/python/dgl/convert.py::heterograph
+        """
+        if self.mode == SCAN_MODE:
+            return self._load_in_scan_mode()
+        elif self.mode == QUERY_MODE:
+            return self._load_in_query_mode()
+        else:
+            raise ValueError(f'unknown mode {self.mode}')

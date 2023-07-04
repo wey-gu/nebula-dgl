@@ -105,6 +105,13 @@ with open('example/homogeneous_graph.yaml', 'r') as f:
 nebula_loader = NebulaLoader(nebula_config, feature_mapper)
 homo_dgl_graph = nebula_loader.load()
 
+# or query based
+query = """
+MATCH p=()-[:follow]->() RETURN p
+"""
+nebula_loader = NebulaLoader(nebula_config, feature_mapper, query=query, query_space="basketballplayer")
+homo_dgl_graph = nebula_loader.load()
+
 nx_g = homo_dgl_graph.to_networkx()
 nx.draw(nx_g, with_labels=True, pos=nx.spring_layout(nx_g))
 ```
