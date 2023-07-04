@@ -171,6 +171,7 @@ class NebulaLoader():
             for space in m_client.list_spaces()}
         self.vertex_tag_schema_dict = {}
         self.tag_feature_dict = {}
+        self.prop_pos_index = {}
         self._validate_vertex_tags(m_client, feature_mapper)
         self.edge_type_schema_dict = {}
         self.edge_feature_dict = {}
@@ -196,6 +197,12 @@ class NebulaLoader():
                     tag.tag_name.decode(): tag for tag in m_client.list_tags(
                         self.spaces_dict[space_name])
                 }
+            # build self.prop_pos_index
+            if tag_name not in self.prop_pos_index:
+                self.prop_pos_index[tag_name] = dict()
+            tag = self.vertex_tag_schema_dict[space_name][tag_name]
+            for index, prop in enumerate(tag.schema.columns):
+                self.prop_pos_index[tag_name][prop.name.decode()] = index
 
             # ensure tag exists
             assert tag_name in self.vertex_tag_schema_dict[space_name], \
@@ -280,8 +287,16 @@ class NebulaLoader():
                         self.spaces_dict[space_name])
                 }
 
-            # ensure edge exists
+            # build self.prop_pos_index
             edge_name = edge_type.get('name')
+            if edge_name not in self.prop_pos_index:
+                self.prop_pos_index[edge_name] = dict()
+            edge = self.edge_type_schema_dict[space_name][edge_name]
+            for index, prop in enumerate(edge.schema.columns):
+                self.prop_pos_index[edge_name][prop.name.decode()] = index
+
+            # ensure edge exists
+
             assert edge_name in self.edge_type_schema_dict[space_name], \
                 'edge {} does not exist'.format(edge_name)
             if space_name not in self.edge_feature_dict:
@@ -376,6 +391,7 @@ class NebulaLoader():
                                       for prop in feature_props]
                 feature_prop_values = []
                 for index, prop_name in enumerate(feature_prop_names):
+                    #raw_value = prop_values[self.prop_pos_index[tag_or_edge][prop_name]]
                     raw_value = prop_values[prop_pos_index[prop_name]]
                     # convert byte value according to type
                     feature_prop_values.append(
@@ -607,12 +623,13 @@ class NebulaLoader():
                 vertex_index = 0
                 transform_function = self.get_feature_transform_function(
                     tag_features, prop_names)
-                for vertex_id, prop_values in g['nodes'][tag_name].items():
+                for vertex_id, prop_map in g['nodes'][tag_name].items():
                     _vertex_id_dict[vertex_id] = vertex_index
                     vertex_index += 1
                     # feature data for vertex(node)
                     if not tag_features:
                         continue
+                    prop_values = [prop_map.get(prop_name) for prop_name in prop_names]
                     feature_values = transform_function(prop_values)
                     for index, feature_name in enumerate(tag_features):
                         feature = tag_features[feature_name]
@@ -647,18 +664,13 @@ class NebulaLoader():
                         props.add(prop['name'])
                 prop_names = list(props)
 
-                graph_storage_client = self.get_storage_client()
-                resp = graph_storage_client.scan_edge(
-                    space_name=space_name,
-                    edge_name=edge_name,
-                    prop_names=prop_names)
                 transform_function = self.get_feature_transform_function(
                     edge_features, prop_names)
                 start_vertices, end_vertices = [], []
                 start_vertex_id_dict = vertex_id_dict[space_name][start_vertex_tag]
                 end_vertex_id_dict = vertex_id_dict[space_name][end_vertex_tag]
 
-                for edge_tuple, prop_values in g['edges'][edge_name].items():
+                for edge_tuple, prop_map in g['edges'][edge_name].items():
                     start_vertices.append(
                         start_vertex_id_dict[edge_tuple[0]]
                     )
@@ -668,6 +680,7 @@ class NebulaLoader():
                     # feature data for edge
                     if not edge_features:
                         continue
+                    prop_values = [prop_map.get(prop_name) for prop_name in prop_names]
                     feature_values = transform_function(prop_values)
                     for index, feature_name in enumerate(edge_features):
                         feature = edge_features[feature_name]
