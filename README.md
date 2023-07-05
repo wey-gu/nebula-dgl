@@ -19,7 +19,7 @@ python3 -m pip install dgl dglgo -f https://data.dgl.ai/wheels/repo.html
 
 ### Install from codebase for dev
 ```bash
-python3 -m pip install nebula3-python==3.3.0
+python3 -m pip install nebula3-python
 python3 -m pip install dgl dglgo -f https://data.dgl.ai/wheels/repo.html
 
 # build and install

@@ -1,7 +1,7 @@
 [project]
 name = "nebula-dgl"
-version = "0.1.1"
-description = "Lib for Nebula Graph integration with Deep Graph Library (DGL)."
+version = "0.1.2"
+description = "Lib for NebulaGraph integration with Deep Graph Library (DGL)."
 authors = [
     {name = "Wey Gu", email = "weyl.gu@gmail.com"},
 ]
