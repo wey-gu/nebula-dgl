@@ -541,6 +541,7 @@ class NebulaLoader():
                 dgl_graph.edata[prop_name] = tensor(prop_values) if len(self.edge_feature_dict[space_name]) == 1 else \
                     {edge_name: tensor(prop_values)}
 
+        self.vertex_id_dict = vertex_id_dict
         return dgl_graph
 
     def parse_result(self, g: Dict, item):
@@ -700,6 +701,7 @@ class NebulaLoader():
                 dgl_graph.edata[prop_name] = tensor(prop_values) if len(self.edge_feature_dict[space_name]) == 1 else \
                     {edge_name: tensor(prop_values)}
 
+        self.vertex_id_dict = vertex_id_dict
         return dgl_graph
 
     def load(self) -> DGLHeteroGraph:
