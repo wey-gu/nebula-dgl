@@ -2,7 +2,7 @@
 
 [![pdm-managed](https://img.shields.io/badge/pdm-managed-blueviolet)](https://pdm.fming.dev) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-nebula-dgl is the Lib for Nebula Graph integration with Deep Graph Library (DGL).
+nebula-dgl is the Lib for NebulaGraph integration with Deep Graph Library (DGL).
 
 > nebula-dgl is still WIP, there is a demo project [here](https://github.com/wey-gu/NebulaGraph-Fraud-Detection-GNN/) .
 
@@ -181,7 +181,7 @@ Result:
  50: 0.06}
  ```
 
-## Nebula Graph to DGL
+## NebulaGraph to DGL
 
 ```python
 from nebula_dgl import NebulaLoader
@@ -230,7 +230,7 @@ networkx.degree_centrality(nx_g)
 ```
 
 
-## Multi-Part Loader for Nebula Graph
+## Multi-Part Loader for NebulaGraph
 
 1. For now, the Multi-Part Loader is slow like sequence scan, need to profile the performance.
 
