@@ -75,7 +75,7 @@ cd work
 Install nebula-dgl:
 
 ```
-!python3 -m pip install python3 -m pip install nebula3-python==3.3.0
+!python3 -m pip install python3 -m pip install nebula3-python==3.4.0
 !python3 -m pip install dgl dglgo -f https://data.dgl.ai/wheels/repo.html
 !python3 -m pip install .
 ```
