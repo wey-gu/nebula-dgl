@@ -99,13 +99,16 @@ nebula_config = {
     "nebula_password": "nebula",
 }
 
+# scan loader(mostly for training)
+
 with open('example/homogeneous_graph.yaml', 'r') as f:
     feature_mapper = yaml.safe_load(f)
 
 nebula_loader = NebulaLoader(nebula_config, feature_mapper)
 homo_dgl_graph = nebula_loader.load()
 
-# or query based
+# or query based(mostly for small graph when inference)
+
 query = """
 MATCH p=()-[:follow]->() RETURN p
 """
